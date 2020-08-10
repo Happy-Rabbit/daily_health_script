@@ -10,7 +10,7 @@ userData    :dict   =   {"Login.Token1": username,
 
 configFormat:dict   =   {"username":            '',
                          "password":            '',
-                         'default_log_evel':    1,
+                         'default_log_level':    1,
                          'postTime':            '09:00,10:00,15:00',
                          'run_and_loop':        False,
                          'note':                '"run_and_loop": run script before loop. "postTime": use english comma to split.'}
@@ -310,7 +310,7 @@ example:
                 error(repr(e))
                 print(repr(e))
                 return None
-            defaultLog = int(savedUserData['default_log_evel'])
+            defaultLog = int(savedUserData['default_log_level'])
             assert 0 <= defaultLog <= 5, "Error! Wrong default log level!"
             user(INFO, 'Config file read success. Default log level is: {}'.format(LOG_LIST[defaultLog]))
             print("config read success.")
