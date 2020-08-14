@@ -1,69 +1,93 @@
-# daily_health_script
+### 多用户版健康日报填报脚本
 
-### 介绍
-NUIST健康日报填写脚本
+NUIST 健康日报填报脚本(多用户版)
 
-**注意**: 脚本运行可能会造成时间不准确(误差一分钟是有可能的)
+**注意**: 多用户版的脚本可能不是很稳定, 而且时间也不一定会按照设定好的时间走(有可能误差1分钟). 而且开发者不建议多用户版超过64个用户一起登录(可能窗口太长看不到信息了2333).
 
 ### 运行
 
 **必备工具**
+
 - python3
-- requests (python的包)
-- my-fake-useragent (python的包)
+- requests(python的包)
+- my-fake-useragent(python的包)
+- curses(python的包)
+    - [Windows版安装教程](https://www.cnblogs.com/hardcoreYutian/p/11270871.html)
+    - [下载地址](https://www.lfd.uci.edu/~gohlke/pythonlibs/#curses)
+    - 注意, 没有这个包, 本脚本无法正常工作, 望知悉.
+    - 安装: `python -m pip install <whl文件路径>`
+    - 例如:
+![安装](pics/1.png "Install")
+    - 安装完成后尝试执行`python -c "import curses"`, 如果没有错误等, 证明安装成功. <font color=#bbbbbb>(大概成功了吧...)</font>
+    - (备份了一份放在了[curses](./curses)文件夹里)
 
-包的安装方式: `python -m pip install requests my-fake-useragent`
+### 目前的功能
 
-**运行方法**
+- [x] 多用户提交
+- [x] 生成配置文件的脚本和运行的脚本合二为一
+- [x] 配置文件读取并添加用户
+- [ ] ~~配置文件修改和删除用户(**暂不可用**)~~
+- [x] 多用户同界面显示
+- [x] 隐藏光标显示
+- [x] 运行时长和当前时间一同显示
+- [x] 显示下次提交时间
+- [x] 用户备注(昵称, 只允许ASCII字符, 20字符以内)
 
-![初次运行](pics/1.png)
+文件所在位置:
+- [x] log文件在用户目录下的pyLogs里的auto_commit_multi_healthy.log
+- [x] 配置文件在用户目录下的multi_health.json
+### 使用方法
 
-- 第一次运行, 输入`python auto_healthy.py loop` 或者 `python auto_healthy.py once`来生成配置文件.
-    - 配置文件在上述帮助信息中会说明位置.
-    - 配置文件的扩展名是json
-    - 另一个log结尾的是日志文件
-- 打开配置文件(上述为C:\\Users\\zyx1\\daily_health.json)
-![配置文件内容](pics/2.png)
-    - 由于方便阅读, 手动分了行.
-    - `username`: [学校网站](http://my.nuist.edu.cn)的用户名
-    - `password`: 学校网站的密码
-    - `default_log_level`: 默认的日志等级: 0-5对应`debug`, `info`, `warn`, `error`, `fatal`和`disable`. 默认的是1(info)
-    - `postTime`: 发送请求的时间, 可以是单个时间, 可以是逗号隔开的时间, 格式是HH:MM, 注意逗号和冒号是英文符号, 中间没有空格. (loop模式)
-    - `run_and_loop`: 在设定循环提交之前先提交一次请求. (loop模式)
-    - `note`: 就是note信息嘛... 这个不影响的2333...
-    - 配置好的json文件大概长成这个样子:
-![配置好的配置文件](pics/3.png)
-- 配置文件配置好, **保存**, 然后再运行刚才的`python auto_healthy.py loop` 或 `python auto_healthy.py once`, 就可以正常运行了(前提是账号密码啥的没问题)
+**注意**: 由于加载项较多, 导致脚本初始化较慢(1-5秒左右), 请耐心等待.
 
-#### 提醒
+#### 生成配置文件
 
-有些设备可能没办法安装`my-fake-useragent`模块, duck不必担心.
+输入命令`python multi_healthy.py config`来生成配置文件
 
-py文件里面, 有一行是`from my_fake_useragent import UserAgent as UA`, 删掉, 后面有一行`self.s.headers['User-Agent'] = UA().random()`改成你想换的`User-Agent`就可以了.
+例如: 
 
-![位置](pics/4.png)
+![生成配置文件](pics/2.png "generate config command")
 
-比如
- `self.s.headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"`
+生成后的配置文件为:
 
-## **如果代码有问题的话, 可以把最后出问题的log文件截图[发给我](mailto:happy.rabbit.yy@outlook.com)**
+![生成后的配置文件](pics/3.png "generated config file.")
 
-#### 注意
+如果想要修改和删除用户信息... 只能自己修改配置文件了... ~~<font color=#bbbbbb>(对不起我太懒了orz)</font>~~
 
-**此版本增加了重试次数. 如果窗口显示Success表示成功了**
+#### 启动程序
 
-当日志里面提示超时(Timed Out)的时候, 如果3次重试全部都是超时, 建议自己用电脑/手机/平板等, [访问](http://my.nuist.edu.cn)一下并且尝试打开网页版健康日报. 如果网页版访问正常, 且多次请求全部超时, 请[联系我](mailto:happy.rabbit.yy@outlook.com).
+输入`python multi_healthy.py loop`来运行程序
 
-~~<font color=#aaa>不过很有可能我也不知道这东西应该怎么处理... <font color=#ddd>(对不起, 我太菜了)</font></font>~~
+运行后, 输入命令的光标消失, 界面改变, 注意不要擅自改变窗口大小, 尤其是缩小窗口, 很容易导致程序崩溃(因为我太菜了, 刚开始使用python的curses库, 不是很会用...)
 
-设置超时的原因, 是因为怕长时间无响应导致程序卡死.
-默认设置的超时是15秒(
+运行结果大致如下:
 
-一些可能较为常见的错误信息:
- 
-- **ConnectionTimedOut**: 连接超时, 此版本增加了重试次数. 如果窗口显示Success表示成功了
-- **ReadTimeout**: 发送请求15秒后服务器没有回应, 读取超时. 
-- **KeyError**: 可能是配置文件有问题, 请检查配置文件或重新生成配置文件.
-- **PermissionError**: 权限不足, 一般不会出现这个问题, 如果确实出现了... 请尝试用管理员权限执行.
+![开始运行](pics/4.png "Running...")
 
-**最后, 开发者不建议使用脚本来填写, ~~我只是太懒了所以才写的~~**
+菜单栏:
+- **username**: 学号
+- **nickname**: 用户设定的昵称, 方便区分用户
+- **last post time**: 上次的提交时间
+- **status**: 状态
+    - *Waiting*: 等待中且没有上次提交结果.
+    - *Running*: 运行中
+    - *Success*: 提交成功.
+    - *Failed*: 提交失败, 详情请查看log文件.
+- **next post time**: 下一次的运行时间.
+- **OK**: 提交成功次数
+- **err**: 提交失败次数
+- **all**: 提交总次数
+
+#### 备注
+
+**关于`my-fake-useragent`不能安装的问题**:
+
+如果有些设备无法安装`my-fake-useragent`, 可以将脚本里的`from my_fake_useragent import UserAgent as UA`删掉, 把`self.s.headers['User-Agent'] = UA().random()`修改成`self.s.headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"`
+
+后面的这个User-Agent可以修改成你想改的.
+
+**关于`curses`无法安装的问题**:
+
+如果有些设备没办法安装`curses`, 建议自己去找一下安装教程, 或者... 使用单用户版的吧(
+
+**开发者并不建议使用脚本, 最好还是自己去填. ~~<font color=#aaaaaa>只是我太懒了所以才写的脚本...</font>~~**
