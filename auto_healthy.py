@@ -13,8 +13,12 @@ configFormat:dict   =   {"username":            '',
                          'default_log_level':    1,
                          'postTime':            '09:00,10:00,15:00',
                          'run_and_loop':        False,
-                         'note':                '"run_and_loop": run script before loop. "postTime": use english comma to split.'}
+                         'disable_echo':        False,
+                         'note1':               '"run_and_loop": run script before loop.',
+                         'note2':               '"postTime": use english comma to split.',
+                         'note3':               '"disable_echo": when set true, loop mode will not print info.'}
 configFile  :str    =   os.path.join(os.getenv('userprofile'), 'daily_health.json') if os.name == 'nt' else os.path.join(os.getenv('HOME'), 'daily_health.json')
+disableEcho :bool   =   False               # disable print information when in loop.
 
 indexUrl    :str    =   "http://my.nuist.edu.cn"
 loginUrl    :str    =   "http://my.nuist.edu.cn/userPasswordValidate.portal"
@@ -80,8 +84,8 @@ class AutoLogin():
         self.userData = copy.deepcopy(userData)
         self.userData["Login.Token1"] = username
         self.userData["Login.Token2"] = password
-        self.postTime = postTime.replace('，', ',').replace('：', ':')
-    def run(self) -> bool:
+        self.postTime = postTime.replace('，', ',').replace('：', ':').replace(' ', '')
+    def run(self, retry: int = 3) -> bool:
         try:
             debug("Try to get main page...")
             temp = self.s.get(indexUrl, timeout=15)
@@ -95,7 +99,7 @@ class AutoLogin():
             if 'success' in temp.text.lower():
                 info("User({}) login success!".format(self.username))
             else:
-                error("Auto login failed!")
+                error(f"Auto login failed! Return message: {temp.text}")
                 return False
             debug('Try to get render url...')
             temp = self.s.get(renderUrl, timeout=15)
@@ -220,17 +224,21 @@ class AutoLogin():
             info('Post data finished with no error.')
             return True
         except Exception as e:
-            error(repr(e))
-            return False
+            warn(repr(e))
+            warn("Retry times: {}".format(3 - retry + 1))
+            if retry < 0:
+                error("Max Retried times!")
+                return False
+            return self.run(retry - 1)
 
 def loop(target: AutoLogin, runAndLoop: bool = False) -> None:
     try:
         debug("Thread has been started.")
         global count, success, failed
-        lastResuestTime = ''
+        lastPostTime = ''
         timeList = target.postTime
         if runAndLoop:
-            lastResuestTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+            lastPostTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
             result = target.run()
             if result:
                 success += 1
@@ -238,13 +246,13 @@ def loop(target: AutoLogin, runAndLoop: bool = False) -> None:
                 failed += 1
             count += 1
         if ',' in timeList:
-            timeList = timeList.split(',')
+            timeList = [i.zfill(5) for i in timeList.split(',')]
         else:
-            timeList = [timeList,]
+            timeList = [timeList.zfill(5),]
         while True:
             if time.strftime('%H:%M') in timeList:
-                if lastResuestTime != time.strftime("%Y-%m-%d %H:%M", time.localtime()):
-                    lastResuestTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+                if lastPostTime != time.strftime("%Y-%m-%d %H:%M", time.localtime()):
+                    lastPostTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
                     result = target.run()
                     if result:
                         success += 1
@@ -264,7 +272,7 @@ def getTime(runTime: float = 0.0) -> str:
     mins = str(int(realTime) // 60).zfill(2)
     realTime %= 60
     secs = str(realTime).zfill(2)
-    info = f'{day} days ' if day > 0 else ''
+    info = '' if day == 0 else ("1 day " if day == 1 else f"{day} days ")
     info += f'{hour}:{mins}:{secs}'
     return info
 
@@ -272,6 +280,7 @@ def main():
     try:
         global configFile, logFolder, logFileName, defaultLog
         global count, success, failed, INFO
+        global disableEcho
         helpInfo = """usage: 
     python {} <mode> [args]
 mode:
@@ -292,7 +301,8 @@ example:
             try:
                 debug("Try to generate config file...")
                 f = open(configFile, 'w+', encoding='utf-8')
-                json.dump(configFormat, f)
+                tempConfigData = json.dumps(configFormat, indent=4, separators=(',',':')).encode('utf-8').decode('raw_unicode_escape')
+                f.write(tempConfigData)
                 debug('Config file generate finished!')
                 f.close()
             except Exception as e:
@@ -314,13 +324,14 @@ example:
             assert 0 <= defaultLog <= 5, "Error! Wrong default log level!"
             user(INFO, 'Config file read success. Default log level is: {}'.format(LOG_LIST[defaultLog]))
             print("config read success.")
-            
+            disableEcho = savedUserData['disable_echo']
         if mode.lower() == 'once':
             info("Once mode.")
             autoLogin = AutoLogin(username=savedUserData['username'], password=savedUserData['password'])
             result = autoLogin.run()
             print("success!" if result else "failed! please read log file.")
         elif mode.lower() == 'loop':
+            userName = savedUserData['username']
             autoLogin = AutoLogin(username=savedUserData['username'], password=savedUserData['password'], postTime=savedUserData['postTime'])
             info("Loop mode.")
             debug("Try to create thread.")
@@ -330,9 +341,10 @@ example:
             runTime = time.time()
             while True:
                 try:
-                    print('\b' * 100 + 'Running: ' + getTime(runTime) + f'  Success: {success}  Failed: {failed} Count: {count}', end='', flush=True)
+                    if not disableEcho:
+                        print('\b' * 100 + 'Running: ' + getTime(runTime) + f'  User: {userName} Success: {success}  Failed: {failed} Count: {count}', end='', flush=True)
                 except KeyboardInterrupt:
-                    print('\nAbort.')
+                    print('\nAbort.' if not disableEcho else 'Abort.')
                     info("Exit.")
                     exit(0)
         else:

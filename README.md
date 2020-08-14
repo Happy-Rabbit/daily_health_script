@@ -3,6 +3,8 @@
 ### 介绍
 NUIST健康日报填写脚本
 
+**注意**: 脚本运行可能会造成时间不准确(误差一分钟是有可能的)
+
 ### 运行
 
 **必备工具**
@@ -44,4 +46,24 @@ py文件里面, 有一行是`from my_fake_useragent import UserAgent as UA`, 删
 比如
  `self.s.headers['User-Agent'] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"`
 
- ## **如果代码有问题的话, 可以把最后出问题的log文件截图[发给我](mailto:happy.rabbit.yy@outlook.com)**
+## **如果代码有问题的话, 可以把最后出问题的log文件截图[发给我](mailto:happy.rabbit.yy@outlook.com)**
+
+#### 注意
+
+**此版本增加了重试次数. 如果窗口显示Success表示成功了**
+
+当日志里面提示超时(Timed Out)的时候, 如果3次重试全部都是超时, 建议自己用电脑/手机/平板等, [访问](http://my.nuist.edu.cn)一下并且尝试打开网页版健康日报. 如果网页版访问正常, 且多次请求全部超时, 请[联系我](mailto:happy.rabbit.yy@outlook.com).
+
+~~<font color=#aaa>不过很有可能我也不知道这东西应该怎么处理... <font color=#ddd>(对不起, 我太菜了)</font></font>~~
+
+设置超时的原因, 是因为怕长时间无响应导致程序卡死.
+默认设置的超时是15秒(
+
+一些可能较为常见的错误信息:
+ 
+- **ConnectionTimedOut**: 连接超时, 此版本增加了重试次数. 如果窗口显示Success表示成功了
+- **ReadTimeout**: 发送请求15秒后服务器没有回应, 读取超时. 
+- **KeyError**: 可能是配置文件有问题, 请检查配置文件或重新生成配置文件.
+- **PermissionError**: 权限不足, 一般不会出现这个问题, 如果确实出现了... 请尝试用管理员权限执行.
+
+**最后, 开发者不建议使用脚本来填写, ~~我只是太懒了所以才写的~~**
