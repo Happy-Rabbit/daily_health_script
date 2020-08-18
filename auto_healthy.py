@@ -2,17 +2,21 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.0"
-__file_version_tuple__ = (1, 0, 0)
+__file_version__ = "1.0.1"
+__file_version_tuple__ = (1, 0, 1)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
 __last_update_date__ = "2020/08/18"
 
 username    :str    =   ''
 password    :str    =   ''
-userData    :dict   =   {"Login.Token1": username, 
-                         "Login.Token2": password, 
-                         "goto": "http://my.nuist.edu.cn/loginSuccess.portal"}
+userData    :dict   =   {"username":    username, 
+                         "password":    password, 
+                         "captcha":     '',
+                         '_eventId':    'submit',
+                         'cllt':        'userNameLogin',
+                         'lt':          '',
+                         'execution':   ''}
 
 configFormat:dict   =   {"username":            '',
                          "password":            '',
@@ -26,8 +30,8 @@ configFormat:dict   =   {"username":            '',
 configFile  :str    =   os.path.join(os.getenv('userprofile'), 'daily_health.json') if os.name == 'nt' else os.path.join(os.getenv('HOME'), 'daily_health.json')
 disableEcho :bool   =   False               # disable print information when in loop.
 
-indexUrl    :str    =   "http://my.nuist.edu.cn"
-loginUrl    :str    =   "http://my.nuist.edu.cn/userPasswordValidate.portal"
+indexUrl    :str    =   "http://authserver.nuist.edu.cn/authserver/login?service=http%3A%2F%2Fmy.nuist.edu.cn%2F"
+loginUrl    :str    =   "http://authserver.nuist.edu.cn/authserver/login?service=http%3A%2F%2Fmy.nuist.edu.cn%2Findex.portal"
 renderUrl   :str    =   "http://e-office2.nuist.edu.cn/infoplus/form/XNYQSB/start"
 
 logFolder   :str    =   os.path.join(os.getenv('userprofile'), 'pyLogs') if os.name == 'nt' else os.path.join(os.getenv('HOME'), 'pyLogs')
@@ -74,35 +78,71 @@ fatal = lambda info: log(FATAL, info)
 user  = lambda level, info: log(level, info, isPriv=True)
 
 try:
+    import js2py
     from requests import Session
     from my_fake_useragent import UserAgent as UA
+    from bs4 import BeautifulSoup as BS
 except Exception as e:
     fatal(repr(e))
     print(e)
     exit(1)
 
+bs = lambda x: BS(x.content, "html.parser")
+
+try:
+    tempSession = Session()
+    tempCrypto = tempSession.get("http://authserver.nuist.edu.cn/authserver/ids/common/encrypt.js")
+    Crypto = js2py.EvalJs()
+    Crypto.execute(tempCrypto.text)
+    Crypt = Crypto.encryptPassword
+except Exception as e:
+    fatal(repr(e))
+
 class AutoLogin():
     def __init__(self, username: str, password: str, postTime: str = '09:00'):
-        global userData
+        global userData, Crypt
         self.s = Session()
         self.s.headers['User-Agent'] = UA().random()
         self.username = username
         self.userData = copy.deepcopy(userData)
-        self.userData["Login.Token1"] = username
-        self.userData["Login.Token2"] = password
+        self.userData["username"] = username
+        self.userData["password"] = password
         self.postTime = postTime.replace('，', ',').replace('：', ':').replace(' ', '')
+        self.crypt = Crypt
+    
+    def isNeedCaptcha(self) -> bool:
+        try:
+            urlFormat = "http://authserver.nuist.edu.cn/authserver/checkNeedCaptcha.htl?username={username}&_={timestamp}"
+            url = urlFormat.format(username=self.username, timestamp=int(time.time()))
+            res = self.s.get(url).json()
+            return res['isNeed']
+        except Exception as e:
+            warn(repr(e))
+            return None
+    
     def run(self, retry: int = 3) -> bool:
         try:
             debug("Try to get main page...")
             temp = self.s.get(indexUrl, timeout=15)
+            tempBS = bs(temp)
+            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
+            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
+            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
+            self.userData['execution'] = execute
             if temp.status_code != 200:
                 warn("Get index url failed! status code: {}".format(temp.status_code))
             debug("Get main page success!")
+            debug("Try to know whether need captcha...")
+            result = self.isNeedCaptcha()
+            if result:
+                warn("User({}) need captcha to login!".format(self.username))
+            else:
+                debug("User({}) don't need captcha to login.".format(self.username))
             temp = self.s.post(loginUrl, data=self.userData)
             if temp.status_code != 200:
                 error("Post user data to loginUrl success, but got status code: {}".format(temp.status_code))
                 return False
-            if 'success' in temp.text.lower():
+            if 'http://my.nuist.edu.cn/index.portal' == temp.url:
                 info("User({}) login success!".format(self.username))
             else:
                 error(f"Auto login failed! Return message: {temp.text}")
@@ -328,7 +368,7 @@ example:
                 return None
             defaultLog = int(savedUserData['default_log_level'])
             assert 0 <= defaultLog <= 5, "Error! Wrong default log level!"
-            user(INFO, 'Config file read success. Default log level is: {}'.format(LOG_LIST[defaultLog]))
+            user(DEBUG, 'Config file read success. Default log level is: {}'.format(LOG_LIST[defaultLog]))
             print("config read success.")
             disableEcho = savedUserData['disable_echo']
         if mode.lower() == 'once':
