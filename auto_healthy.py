@@ -2,6 +2,12 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
+__file_version__ = "1.0.0"
+__file_version_tuple__ = (1, 0, 0)
+__license__ = "MIT"
+__author__ = "Happy-Rabbit"
+__last_update_date__ = "2020/08/18"
+
 username    :str    =   ''
 password    :str    =   ''
 userData    :dict   =   {"Login.Token1": username, 
