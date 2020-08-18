@@ -2,21 +2,31 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
+__file_version__ = "1.0.1"
+__file_version_tuple__ = (1, 0, 1)
+__license__ = "MIT"
+__author__ = "Happy-Rabbit"
+__last_update_date__ = "2020/08/18"
+
 username    :str    =   ''
 password    :str    =   ''
-userData    :dict   =   {"Login.Token1": username, 
-                         "Login.Token2": password, 
-                         "goto": "http://my.nuist.edu.cn/loginSuccess.portal"}
+userData    :dict   =   {"username":    username, 
+                         "password":    password, 
+                         "captcha":     '',
+                         '_eventId':    'submit',
+                         'cllt':        'userNameLogin',
+                         'lt':          '',
+                         'execution':   ''}
 userDataList:list   =   []
 
-configFormat:dict   =   {"username":            '',
-                         "password":            '',
-                         'nickname':            '',
-                         'postTime':            '',}
+configFormat:dict   =   {"username":    '',
+                         "password":    '',
+                         'nickname':    '',
+                         'postTime':    '',}
 configFile  :str    =   os.path.join(os.getenv('userprofile'), 'multi_health.json') if os.name == 'nt' else os.path.join(os.getenv('HOME'), 'multi_health.json')
 
-indexUrl    :str    =   "http://my.nuist.edu.cn"
-loginUrl    :str    =   "http://my.nuist.edu.cn/userPasswordValidate.portal"
+indexUrl    :str    =   "http://authserver.nuist.edu.cn/authserver/login?service=http%3A%2F%2Fmy.nuist.edu.cn%2F"
+loginUrl    :str    =   "http://authserver.nuist.edu.cn/authserver/login?service=http%3A%2F%2Fmy.nuist.edu.cn%2Findex.portal"
 renderUrl   :str    =   "http://e-office2.nuist.edu.cn/infoplus/form/XNYQSB/start"
 
 logFolder   :str    =   os.path.join(os.getenv('userprofile'), 'pyLogs') if os.name == 'nt' else os.path.join(os.getenv('HOME'), 'pyLogs')
@@ -63,17 +73,30 @@ fatal = lambda info: log(FATAL, info)
 user  = lambda level, info: log(level, info, isPriv=True)
 
 try:
+    import js2py
     from requests import Session
     from my_fake_useragent import UserAgent as UA
+    from bs4 import BeautifulSoup as BS
     import curses
 except Exception as e:
     fatal(repr(e))
     print(e)
     exit(1)
 
+bs = lambda x: BS(x.content, "html.parser")
+
+try:
+    tempSession = Session()
+    tempCrypto = tempSession.get("http://authserver.nuist.edu.cn/authserver/ids/common/encrypt.js")
+    Crypto = js2py.EvalJs()
+    Crypto.execute(tempCrypto.text)
+    Crypt = Crypto.encryptPassword
+except Exception as e:
+    fatal(repr(e))
+
 class AutoLogin():
     def __init__(self, username: str, password: str, postTime: str = '09:00'):
-        global userData
+        global userData, Crypt
         try:
             assert postTime, "Error! postTime is empty!"
             assert username, "Error! username is empty!"
@@ -82,30 +105,53 @@ class AutoLogin():
             self.s.headers['User-Agent'] = UA().random()
             self.username = username
             self.userData = copy.deepcopy(userData)
-            self.userData["Login.Token1"] = username
-            self.userData["Login.Token2"] = password
+            self.userData["username"] = username
+            self.userData["password"] = password
             self.postTime = postTime.replace('，', ',').replace('：', ':').replace(' ', '')
             assert self.postTime, "Error! Invalid time!"
             self.postTime = [self.postTime,] if ',' not in self.postTime else [i for i in self.postTime.split(',') if i]
             self.postTime = list(set(self.postTime))
+            self.crypt = Crypt
         except Exception as e:
             error(repr(e))
             print(repr(e))
+
+    def isNeedCaptcha(self) -> bool:
+        try:
+            urlFormat = "http://authserver.nuist.edu.cn/authserver/checkNeedCaptcha.htl?username={username}&_={timestamp}"
+            url = urlFormat.format(username=self.username, timestamp=int(time.time()))
+            res = self.s.get(url).json()
+            return res['isNeed']
+        except Exception as e:
+            warn(repr(e))
+            return None
+
     def run(self, retry: int = 3) -> bool:
         try:
-            debug(f"User({self.username}): " + "Try to get main page...")
+            debug("Try to get main page...")
             temp = self.s.get(indexUrl, timeout=15)
+            tempBS = bs(temp)
+            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
+            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
+            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
+            self.userData['execution'] = execute
             if temp.status_code != 200:
                 warn("Get index url failed! status code: {}".format(temp.status_code))
-            debug(f"User({self.username}): " + "Get main page success!")
+            debug("Get main page success!")
+            debug("Try to know whether need captcha...")
+            result = self.isNeedCaptcha()
+            if result:
+                warn("User({}) need captcha to login!".format(self.username))
+            else:
+                debug("User({}) don't need captcha to login.".format(self.username))
             temp = self.s.post(loginUrl, data=self.userData)
             if temp.status_code != 200:
-                error(f"User({self.username}): " + "Post user data to loginUrl success, but got status code: {}".format(temp.status_code))
+                error("Post user data to loginUrl success, but got status code: {}".format(temp.status_code))
                 return False
-            if 'success' in temp.text.lower():
-                info("User({}): Login success!".format(self.username))
+            if 'http://my.nuist.edu.cn/index.portal' == temp.url:
+                info("User({}) login success!".format(self.username))
             else:
-                error(f"User({self.username}): " + "Auto login failed!")
+                error(f"Auto login failed! Return message: {temp.text}")
                 return False
             debug(f"User({self.username}): " + 'Try to get render url...')
             temp = self.s.get(renderUrl, timeout=15)
