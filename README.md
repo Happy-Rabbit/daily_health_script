@@ -7,9 +7,9 @@ NUIST健康日报填写脚本
 
 ### 版本信息
 
-[![](https://img.shields.io/badge/当前最新版本-1.0.1-blueviolet)](versions.md "前往版本更新页面")
+[![](https://img.shields.io/badge/当前最新版本-1.0.2-blueviolet)](versions.md "前往版本更新页面")
 
-![](https://img.shields.io/badge/相较于上个版本-有重大更新-important)
+![](https://img.shields.io/badge/相较于上个版本-无重大更新-informational)
 
 ~~(由于我太菜了导致我版本号是乱起的)~~
 

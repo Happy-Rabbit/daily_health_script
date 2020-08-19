@@ -1,16 +1,38 @@
 ## 版本信息
 
-### 当前最新版本为 1.0.1
+### 当前最新版本为 1.0.2
 
 [![](https://img.shields.io/badge/-return%20to%20README.md-blueviolet)](README.md "返回README.md")
 
-### 1.0.1 更新内容
+### 1.0.2 更新内容
+
+项目 |内容
+:--: |:--:
+更新日期 | 2020年8月19日
+是否有重大更新 | ![](https://img.shields.io/badge/-no-informational "否")
+版本状态 | ![](https://img.shields.io/badge/-newest-brightgreen "最新")
+
+**更新内容**:
+
+- 新增了一个`class`, 叫做`SelfAbort`
+  - 用来手动`raise`错误并且进行重试处理
+  - 继承`Exception`
+  - 被定义为一种异常
+- 调整了一下部分log的输出顺序和重试终止次数
+
+**此版本的变量**: 
+
+> 和[上一版本](#1-0-1)的[变量](#1-0-1-vars)一致
+
+---
+
+### <span id="1-0-1">1.0.1 更新内容</span>
 
 项目 |内容
 :--: |:--:
 更新日期 | 2020年8月18日
 是否有重大更新 | ![](https://img.shields.io/badge/-yes-important "是")
-版本状态 | ![](https://img.shields.io/badge/-newest-brightgreen "最新")
+版本状态 | ![](https://img.shields.io/badge/-old-informational "旧版")
 
 **更新内容**:
 
@@ -21,7 +43,7 @@
   - 而且也没有显示验证码的代码
   - **大概**下个版本会追加显示验证码的功能 ~~(**大概**)~~
 
-**此版本的变量**:
+<span id="1-0-1-vars">**此版本的变量**:</span>
 
 静态变量 | 内容
 :--: | :--:

@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.1"
-__file_version_tuple__ = (1, 0, 1)
+__file_version__ = "1.0.2"
+__file_version_tuple__ = (1, 0, 2)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/18"
+__last_update_date__ = "2020/08/19"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -87,6 +87,12 @@ except Exception as e:
     print(e)
     exit(1)
 
+class SelfAbort(Exception):
+    def __init__(self, info: str = ""):
+        self.info = info
+    def __str__(self):
+        return self.info
+
 bs = lambda x: BS(x.content, "html.parser")
 
 try:
@@ -130,7 +136,8 @@ class AutoLogin():
             self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
             self.userData['execution'] = execute
             if temp.status_code != 200:
-                warn("Get index url failed! status code: {}".format(temp.status_code))
+                error("Get index url failed! status code: {}".format(temp.status_code))
+                raise SelfAbort
             debug("Get main page success!")
             debug("Try to know whether need captcha...")
             result = self.isNeedCaptcha()
@@ -141,12 +148,12 @@ class AutoLogin():
             temp = self.s.post(loginUrl, data=self.userData)
             if temp.status_code != 200:
                 error("Post user data to loginUrl success, but got status code: {}".format(temp.status_code))
-                return False
+                raise SelfAbort
             if 'http://my.nuist.edu.cn/index.portal' == temp.url:
                 info("User({}) login success!".format(self.username))
             else:
                 error(f"Auto login failed! Return message: {temp.text}")
-                return False
+                raise SelfAbort
             debug('Try to get render url...')
             temp = self.s.get(renderUrl, timeout=15)
             csrfToken = '1' * 32
@@ -167,7 +174,7 @@ class AutoLogin():
             debug('Received data length: {}'.format(len(temp.text)))
             if temp.status_code != 200:
                 error("Post render data to startUrl success, but got status code: {}".format(temp.status_code))
-                return False
+                raise SelfAbort
             if temp.json()['errno'] == 10091:
                 if temp.json()['entities']:
                     info("Got csrfToken.")
@@ -177,20 +184,20 @@ class AutoLogin():
                     temp = self.s.post(startUrl, data=renderData, timeout=15)
                     if temp.status_code != 200:
                         error('Post render data to render url success, but got status code: {}'.format(temp.status_code))
-                        return False
+                        raise SelfAbort
                     if temp.json()['errno'] == 0:
                         info('Login success.')
                         targetUrl = temp.json()['entities'][0]
                         debug('Get target Url success!')
                     else:
                         error('Login failed! Received data: {}'.format(temp.json()))
-                        return False
+                        raise SelfAbort
                 else:
                     error('Post render data to startUrl success, but server did not return the csrfToken.')
-                    return False
+                    raise SelfAbort
             elif temp.json()['errno'] == 16005:
                 error('Post render data to server success, but server told login session expired.')
-                return False
+                raise SelfAbort
             elif temp.json()['errno'] == 0:
                 info('Login success.')
                 targetUrl = temp.json()['entities'][0]
@@ -210,7 +217,7 @@ class AutoLogin():
             temp = self.s.post(recvUrl, data=renderPostData, timeout=15)
             if temp.status_code != 200:
                 error('Post render post data to server but got status code: {}'.format(temp.status_code))
-                return False
+                raise SelfAbort
             debug("Received data length: {}".format(len(temp.text)))
             selfData = temp.json()
             if selfData['errno'] == 0:
@@ -218,6 +225,7 @@ class AutoLogin():
             else:
                 error('Failed to get self data!')
                 debug('received self data is: {}'.format(selfData))
+                raise SelfAbort
             recvData = selfData['entities'][0]['data']
             recvData["_VAR_ENTRY_NAME"] = "学生健康状况申报"
             recvData["_VAR_ENTRY_TAGS"] = "学工部"
@@ -241,10 +249,10 @@ class AutoLogin():
             temp = self.s.post(listNextUrl, data=sendData, timeout=15)
             if temp.status_code != 200:
                 error('Post data failed! Status code is: {}'.format(temp.status_code))
-                return False
+                raise SelfAbort
             if temp.json()['errno'] != 0:
                 error('Post data success but got failed data: {}'.format(temp.json()))
-                return False
+                raise SelfAbort
             info('Post the first one finished!')
             doAction = 'http://e-office2.nuist.edu.cn/infoplus/interface/doAction'
             secondData = {
@@ -263,18 +271,24 @@ class AutoLogin():
             temp = self.s.post(doAction, data=secondData, timeout=15)
             if temp.status_code != 200:
                 error('Post data failed! Status code is: {}'.format(temp.status_code))
-                return False
+                raise SelfAbort
             if temp.json()['errno'] != 0:
                 error('Post data success but got failed data: {}'.format(temp.json()))
-                return False
+                raise SelfAbort
             info('Post data finished with no error.')
             return True
+        except SelfAbort:
+            if retry == 0:
+                error("Max Retried times!")
+                return False
+            warn("Retry times: {}".format(3 - retry + 1))
+            return self.run(retry - 1)
         except Exception as e:
             warn(repr(e))
-            warn("Retry times: {}".format(3 - retry + 1))
             if retry < 0:
                 error("Max Retried times!")
                 return False
+            warn("Retry times: {}".format(3 - retry + 1))
             return self.run(retry - 1)
 
 def loop(target: AutoLogin, runAndLoop: bool = False) -> None:
