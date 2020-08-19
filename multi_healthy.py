@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.1"
-__file_version_tuple__ = (1, 0, 1)
+__file_version__ = "1.0.2"
+__file_version_tuple__ = (1, 0, 2)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/18"
+__last_update_date__ = "2020/08/19"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -83,6 +83,12 @@ except Exception as e:
     print(e)
     exit(1)
 
+class SelfAbort(Exception):
+    def __init__(self, info: str = ""):
+        self.info = info
+    def __str__(self):
+        return self.info
+
 bs = lambda x: BS(x.content, "html.parser")
 
 try:
@@ -136,7 +142,8 @@ class AutoLogin():
             self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
             self.userData['execution'] = execute
             if temp.status_code != 200:
-                warn("Get index url failed! status code: {}".format(temp.status_code))
+                error("Get index url failed! status code: {}".format(temp.status_code))
+                raise SelfAbort
             debug("Get main page success!")
             debug("Try to know whether need captcha...")
             result = self.isNeedCaptcha()
@@ -147,60 +154,60 @@ class AutoLogin():
             temp = self.s.post(loginUrl, data=self.userData)
             if temp.status_code != 200:
                 error("Post user data to loginUrl success, but got status code: {}".format(temp.status_code))
-                return False
+                raise SelfAbort
             if 'http://my.nuist.edu.cn/index.portal' == temp.url:
                 info("User({}) login success!".format(self.username))
             else:
                 error(f"Auto login failed! Return message: {temp.text}")
-                return False
-            debug(f"User({self.username}): " + 'Try to get render url...')
+                raise SelfAbort
+            debug('Try to get render url...')
             temp = self.s.get(renderUrl, timeout=15)
             csrfToken = '1' * 32
             if temp.status_code != 200:
-                warn(f"User({self.username}): " + "Get render url success but got status code: {}".format(temp.status_code))
-            debug(f"User({self.username}): " + 'Get render url success!')
+                warn("Get render url success but got status code: {}".format(temp.status_code))
+            debug('Get render url success!')
             renderData = {
                     'idc': 'XNYQSB',
                     'release': '',
                     'csrfToken': csrfToken,
                     'formData': '{"_VAR_URL":"http://e-office2.nuist.edu.cn/infoplus/form/XNYQSB/start","_VAR_URL_Attr":"{}"}'
                  }
-            debug(f"User({self.username}): " + 'Try post data to render url...')
+            debug('Try post data to render url...')
             targetUrl = ''
             startUrl = 'http://e-office2.nuist.edu.cn/infoplus/interface/start'
             self.s.headers['Referer'] = 'http://e-office2.nuist.edu.cn/infoplus/form/XNYQSB/start'
             temp = self.s.post(startUrl, data=renderData, timeout=15)
-            debug(f"User({self.username}): " + 'Received data length: {}'.format(len(temp.text)))
+            debug('Received data length: {}'.format(len(temp.text)))
             if temp.status_code != 200:
-                error(f"User({self.username}): " + "Post render data to startUrl success, but got status code: {}".format(temp.status_code))
-                return False
+                error("Post render data to startUrl success, but got status code: {}".format(temp.status_code))
+                raise SelfAbort
             if temp.json()['errno'] == 10091:
                 if temp.json()['entities']:
-                    info(f"User({self.username}): " + "Got csrfToken.")
+                    info("Got csrfToken.")
                     csrfToken = temp.json()['entities'][0]
                     renderData['csrfToken'] = csrfToken
-                    debug(f"User({self.username}): " + 'Try to use csrfToken({}) to post...'.format(csrfToken))
+                    debug('Try to use csrfToken({}) to post...'.format(csrfToken))
                     temp = self.s.post(startUrl, data=renderData, timeout=15)
                     if temp.status_code != 200:
-                        error(f"User({self.username}): " + 'Post render data to render url success, but got status code: {}'.format(temp.status_code))
-                        return False
+                        error('Post render data to render url success, but got status code: {}'.format(temp.status_code))
+                        raise SelfAbort
                     if temp.json()['errno'] == 0:
-                        info(f"User({self.username}): " + 'Login success.')
+                        info('Login success.')
                         targetUrl = temp.json()['entities'][0]
-                        debug(f"User({self.username}): " + 'Get target Url success!')
+                        debug('Get target Url success!')
                     else:
-                        error(f"User({self.username}): " + 'Login failed! Received data: {}'.format(temp.json()))
-                        return False
+                        error('Login failed! Received data: {}'.format(temp.json()))
+                        raise SelfAbort
                 else:
-                    error(f"User({self.username}): " + 'Post render data to startUrl success, but server did not return the csrfToken.')
-                    return False
+                    error('Post render data to startUrl success, but server did not return the csrfToken.')
+                    raise SelfAbort
             elif temp.json()['errno'] == 16005:
-                error(f"User({self.username}): " + 'Post render data to server success, but server told login session expired.')
-                return False
+                error('Post render data to server success, but server told login session expired.')
+                raise SelfAbort
             elif temp.json()['errno'] == 0:
-                info(f"User({self.username}): " + 'Login success.')
+                info('Login success.')
                 targetUrl = temp.json()['entities'][0]
-                debug(f"User({self.username}): " + 'Get target Url success! Received data: {}'.format(temp.json()))
+                debug('Get target Url success! Received data: {}'.format(temp.json()))
             stepId = targetUrl.split('/')[-2]
             rand = str(random.random() * 1000)
             renderPostData = {
@@ -215,15 +222,16 @@ class AutoLogin():
             recvUrl = "http://e-office2.nuist.edu.cn/infoplus/interface/render"
             temp = self.s.post(recvUrl, data=renderPostData, timeout=15)
             if temp.status_code != 200:
-                error(f"User({self.username}): " + 'Post render post data to server but got status code: {}'.format(temp.status_code))
-                return False
-            debug(f"User({self.username}): " + "Received data length: {}".format(len(temp.text)))
+                error('Post render post data to server but got status code: {}'.format(temp.status_code))
+                raise SelfAbort
+            debug("Received data length: {}".format(len(temp.text)))
             selfData = temp.json()
             if selfData['errno'] == 0:
-                info(f"User({self.username}): " + 'Got self data success!')
+                info('Got self data success!')
             else:
-                error(f"User({self.username}): " + 'Failed to get self data!')
-                debug(f"User({self.username}): " + 'received self data is: {}'.format(selfData))
+                error('Failed to get self data!')
+                debug('received self data is: {}'.format(selfData))
+                raise SelfAbort
             recvData = selfData['entities'][0]['data']
             recvData["_VAR_ENTRY_NAME"] = "学生健康状况申报"
             recvData["_VAR_ENTRY_TAGS"] = "学工部"
@@ -243,15 +251,15 @@ class AutoLogin():
                     'csrfToken': csrfToken,
                     'lang': 'zh'
                 }
-            debug(f"User({self.username}): " + 'Try to send data to list next step user url with Tempreture: {}℃...'.format(recvData["fieldSTQKfrtw"]))
+            debug('Try to send data to list next step user url with Tempreture: {}℃...'.format(recvData["fieldSTQKfrtw"]))
             temp = self.s.post(listNextUrl, data=sendData, timeout=15)
             if temp.status_code != 200:
-                error(f"User({self.username}): " + 'Post data failed! Status code is: {}'.format(temp.status_code))
-                return False
+                error('Post data failed! Status code is: {}'.format(temp.status_code))
+                raise SelfAbort
             if temp.json()['errno'] != 0:
-                error(f"User({self.username}): " + 'Post data success but got failed data: {}'.format(temp.json()))
-                return False
-            info(f"User({self.username}): " + 'Post the first one finished!')
+                error('Post data success but got failed data: {}'.format(temp.json()))
+                raise SelfAbort
+            info('Post the first one finished!')
             doAction = 'http://e-office2.nuist.edu.cn/infoplus/interface/doAction'
             secondData = {
                     'actionId': '1',
@@ -265,22 +273,28 @@ class AutoLogin():
                     'csrfToken': csrfToken,
                     'lang': 'zh'
                 }
-            debug(f"User({self.username}): " + 'Try to resend data to do action url...')
+            debug('Try to resend data to do action url...')
             temp = self.s.post(doAction, data=secondData, timeout=15)
             if temp.status_code != 200:
-                error(f"User({self.username}): " + 'Post data failed! Status code is: {}'.format(temp.status_code))
-                return False
+                error('Post data failed! Status code is: {}'.format(temp.status_code))
+                raise SelfAbort
             if temp.json()['errno'] != 0:
-                error(f"User({self.username}): " + 'Post data success but got failed data: {}'.format(temp.json()))
-                return False
-            info(f"User({self.username}): " + 'Post data finished with no error.')
+                error('Post data success but got failed data: {}'.format(temp.json()))
+                raise SelfAbort
+            info('Post data finished with no error.')
             return True
+        except SelfAbort:
+            if retry == 0:
+                error("Max Retried times!")
+                return False
+            warn("Retry times: {}".format(3 - retry + 1))
+            return self.run(retry - 1)
         except Exception as e:
             warn(repr(e))
-            warn("Retry times: {}".format(3 - retry + 1))
             if retry < 0:
                 error("Max Retried times!")
                 return False
+            warn("Retry times: {}".format(3 - retry + 1))
             return self.run(retry - 1)
 
 class UserClass():
