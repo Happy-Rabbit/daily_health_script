@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.2"
-__file_version_tuple__ = (1, 0, 2)
+__file_version__ = "1.0.3"
+__file_version_tuple__ = (1, 0, 3)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/19"
+__last_update_date__ = "2020/08/20"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -18,6 +18,7 @@ userData    :dict   =   {"username":    username,
                          'lt':          '',
                          'execution':   ''}
 userDataList:list   =   []
+retryList   :list   =   []
 
 configFormat:dict   =   {"username":    '',
                          "password":    '',
@@ -291,7 +292,7 @@ class AutoLogin():
             return self.run(retry - 1)
         except Exception as e:
             warn(repr(e))
-            if retry < 0:
+            if retry == 0:
                 error("Max Retried times!")
                 return False
             warn("Retry times: {}".format(3 - retry + 1))
@@ -317,6 +318,7 @@ class UserClass():
             self.postTime.sort()
             self.timecost = 0
             self.lastResult = ''
+            self.nextTime = ''
             
         except Exception as e:
             error(repr(e))
@@ -324,15 +326,16 @@ class UserClass():
             exit(0)
     
     def status(self) -> str:
+        if self.runLock:
+            return "Running"
         if self.lastResult:
             return self.lastResult
         else:
-            if self.runLock:
-                return "Running"
-            else:
-                return "Waiting"
+            return "Waiting"
     
     def getNextTime(self):
+        if self.nextTime != '':
+            return self.nextTime
         for i in self.postTime:
             if time.strftime("%H:%M", time.localtime()) < i:
                 return time.strftime("%Y-%m-%d ", time.localtime()) + i
@@ -476,16 +479,25 @@ def echoInfo(stdscr):
         error(repr(e))
 
 def runAll(targetList: list) -> None:
+    global retryList
     try:
         for i in targetList:
-            i.run()
+            result = i.run()
+            if not result:
+                i.nextTime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() + 30 * 60))
+                retryList.append((time.strftime("%H:%M", time.localtime(time.time() + 30 * 60)), i))
+                continue
+            i.nextTime = ''
     except Exception as e:
         error(repr(e))
 
 def timeManager():
-    global userDataList
+    global userDataList, retryList
     timeList = []
+    retryTimes = []
+    retryDict = {}
     last = ''
+    retryLast = ''
     for i in userDataList:
         for j in i.postTime:
             timeList.append(j)
@@ -496,6 +508,14 @@ def timeManager():
             timeDict[j].append(i)
     while True:
         now = time.strftime("%H:%M", time.localtime())
+        if retryList:
+            retryTimes = list(set(i[0] for i in retryList))
+            retryDict = {i:[j[1] for j in retryList if j[0] == i] for i in retryTimes}
+        if now in retryDict.keys() and now != retryLast:
+            retryLast = now
+            thread = threading.Thread(target=runAll, args=(retryDict[now], ))
+            thread.setDaemon(True)
+            thread.start()
         if now in timeDict.keys() and now != last:
             last = now
             thread = threading.Thread(target=runAll, args=(timeDict[now], ))

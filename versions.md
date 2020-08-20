@@ -1,16 +1,35 @@
 ## 版本信息
 
-### 当前最新版本为 1.0.2
+### 当前最新版本为 1.0.3
 
 [![](https://img.shields.io/badge/-return%20to%20README.md-blueviolet)](README.md "返回README.md")
+
+### 1.0.3 更新内容
+
+项目 |内容
+:--: |:--:
+更新日期 | 2020年8月20日
+是否有重大更新 | ![否](https://img.shields.io/badge/-no-informational "否")
+版本状态 | ![最新](https://img.shields.io/badge/-newest-brightgreen "最新")
+
+**更新内容**:
+
+- 新增请求失败半小时后自动重试功能
+- 调整了部分代码
+
+**此版本的重要变量**: 
+
+> 和[1.0.1版本](#1-0-1)的[变量](#1-0-1-vars)一致
+
+---
 
 ### 1.0.2 更新内容
 
 项目 |内容
 :--: |:--:
 更新日期 | 2020年8月19日
-是否有重大更新 | ![](https://img.shields.io/badge/-no-informational "否")
-版本状态 | ![](https://img.shields.io/badge/-newest-brightgreen "最新")
+是否有重大更新 | ![否](https://img.shields.io/badge/-no-informational "否")
+版本状态 | ![旧版](https://img.shields.io/badge/-old-informational "旧版")
 
 **更新内容**:
 
@@ -20,7 +39,7 @@
   - 被定义为一种异常
 - 调整了一下部分log的输出顺序和重试终止次数
 
-**此版本的变量**: 
+**此版本的重要变量**: 
 
 > 和[上一版本](#1-0-1)的[变量](#1-0-1-vars)一致
 
@@ -33,8 +52,8 @@
 项目 |内容
 :--: |:--:
 更新日期 | 2020年8月18日
-是否有重大更新 | ![](https://img.shields.io/badge/-yes-important "是")
-版本状态 | ![](https://img.shields.io/badge/-newest-brightgreen "最新")
+是否有重大更新 | ![是](https://img.shields.io/badge/-yes-important "是")
+版本状态 | ![旧版](https://img.shields.io/badge/-old-informational "旧版")
 
 **更新内容**:
 
@@ -45,7 +64,7 @@
   - 而且也没有显示验证码的代码
   - **大概**下个版本会追加显示验证码的功能 ~~(**大概**)~~
 
-<span id="1-0-1-vars">**此版本的变量**:</span>
+<span id="1-0-1-vars">**此版本的重要变量**:</span>
 
 静态变量 | 内容
 :--: | :--:
@@ -80,8 +99,8 @@ config文件名 | `daily_health.json`
 项目 |内容
 :--: |:--:
 更新日期 | 2020年8月18日
-是否有重大更新 | ![](https://img.shields.io/badge/-yes-important "是")
-版本状态 | ![](https://img.shields.io/badge/-out%20of%20date-inactive "过时")
+是否有重大更新 | ![是](https://img.shields.io/badge/-yes-important "是")
+版本状态 | ![过时](https://img.shields.io/badge/-out%20of%20date-inactive "过时")
 
 **更新内容**:
 
@@ -90,7 +109,7 @@ config文件名 | `daily_health.json`
 - [x] 较为详尽的log输出
 - [x] 文件内加入版本号, 方便查看
 
-**此版本的变量**:
+**此版本的重要变量**:
 
 静态变量 | 内容
 :--: | :--:

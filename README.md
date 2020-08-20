@@ -6,7 +6,7 @@ NUIST 健康日报填报脚本(多用户版)
 
 ### 版本信息
 
-[![](https://img.shields.io/badge/当前最新版本-1.0.2-blueviolet)](versions.md "前往版本更新页面")
+[![](https://img.shields.io/badge/当前最新版本-1.0.3-blueviolet)](versions.md "前往版本更新页面")
 
 ![](https://img.shields.io/badge/相较于上个版本-无重大更新-informational)
 
@@ -49,7 +49,7 @@ curses              | 2.2.1+utf8|必备   | 多用户显示, 如果不让使用c
     - 安装: `python -m pip install <whl文件路径>`
     - 例如:
 ![安装](pics/1.png "Install")
-    - 安装完成后尝试执行`python -c "import curses"`, 如果没有错误等, 证明安装成功. <font color=#bbbbbb>(大概成功了吧...)</font>
+    - 安装完成后尝试执行`python -c "import curses"`, 如果没有错误等, 证明安装成功. (大概成功了吧...)
     - (备份了一份放在了[curses](./curses)文件夹里)
 
 ### 目前的功能
@@ -63,6 +63,7 @@ curses              | 2.2.1+utf8|必备   | 多用户显示, 如果不让使用c
 - [x] 运行时长和当前时间一同显示
 - [x] 显示下次提交时间
 - [x] 用户备注(昵称, 只允许ASCII字符, 20字符以内)
+- [x] 失败后自动重试(单次运行自动重试4次, 4次失败自动推迟30分钟)
 
 文件所在位置:
 - [x] log文件在用户目录下的pyLogs里的auto_commit_multi_healthy.log
@@ -83,7 +84,7 @@ curses              | 2.2.1+utf8|必备   | 多用户显示, 如果不让使用c
 
 ![生成后的配置文件](pics/3.png "generated config file.")
 
-如果想要修改和删除用户信息... 只能自己修改配置文件了... ~~<font color=#bbbbbb>(对不起我太懒了orz)</font>~~
+如果想要修改和删除用户信息... 只能自己修改配置文件了... ~~(对不起我太懒了orz)~~
 
 #### 启动程序
 
@@ -121,4 +122,4 @@ curses              | 2.2.1+utf8|必备   | 多用户显示, 如果不让使用c
 
 如果有些设备没办法安装`curses`, 建议自己去找一下安装教程, 或者... 使用单用户版的吧(
 
-**开发者并不建议使用脚本, 最好还是自己去填. ~~<font color=#aaaaaa>只是我太懒了所以才写的脚本...</font>~~**
+**开发者并不建议使用脚本, 最好还是自己去填. ~~只是我太懒了所以才写的脚本...~~**
