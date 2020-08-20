@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.2"
-__file_version_tuple__ = (1, 0, 2)
+__file_version__ = "1.0.3"
+__file_version_tuple__ = (1, 0, 3)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/19"
+__last_update_date__ = "2020/08/20"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -293,31 +293,56 @@ class AutoLogin():
 
 def loop(target: AutoLogin, runAndLoop: bool = False) -> None:
     try:
+        mktime = lambda x: time.mktime(time.strptime(x, "%Y-%m-%d %H:%M"))
+        nextRetryTime = ''
+        lastRetryTime = ''
         debug("Thread has been started.")
         global count, success, failed
         lastPostTime = ''
+        lastPostStatus = True
         timeList = target.postTime
         if runAndLoop:
             lastPostTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
             result = target.run()
             if result:
                 success += 1
+                lastPostStatus = True
             else:
                 failed += 1
+                lastPostStatus = False
+                nextRetryTime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() + 30 * 60))
             count += 1
         if ',' in timeList:
             timeList = [i.zfill(5) for i in timeList.split(',')]
         else:
             timeList = [timeList.zfill(5),]
         while True:
-            if time.strftime('%H:%M') in timeList:
+            if time.strftime("%H:%M", time.localtime()) in timeList:
                 if lastPostTime != time.strftime("%Y-%m-%d %H:%M", time.localtime()):
                     lastPostTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
                     result = target.run()
                     if result:
                         success += 1
+                        lastPostStatus = True
                     else:
                         failed += 1
+                        lastPostStatus = False
+                        nextRetryTime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() + 1 * 60))
+                    count += 1
+
+            if not lastPostStatus and abs(mktime(lastPostTime) - mktime(nextRetryTime)) < 60:
+                nextRetryTime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() + 1 * 60))
+
+            if not lastPostStatus and time.strftime("%Y-%m-%d %H:%M", time.localtime()) == nextRetryTime:
+                if lastRetryTime != time.strftime("%Y-%m-%d %H:%M", time.localtime()):
+                    lastRetryTime = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+                    result = target.run()
+                    if result:
+                        success += 1
+                        lastPostStatus = True
+                    else:
+                        failed += 1
+                        lastPostStatus = False
                     count += 1
             time.sleep(0.5)
     except Exception as e:
@@ -416,5 +441,9 @@ example:
         return None
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        error(repr(e))
+        exit(0)
 

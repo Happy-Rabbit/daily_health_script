@@ -5,9 +5,11 @@ NUIST健康日报填写脚本
 
 **注意**: 脚本运行可能会造成时间不准确(误差一分钟是有可能的)
 
+> 现在已经可以失败后自动重试了(单次运行自动重试4次, 4次失败自动推迟30分钟)
+
 ### 版本信息
 
-[![](https://img.shields.io/badge/当前最新版本-1.0.2-blueviolet)](versions.md "前往版本更新页面")
+[![](https://img.shields.io/badge/当前最新版本-1.0.3-blueviolet)](versions.md "前往版本更新页面")
 
 ![](https://img.shields.io/badge/相较于上个版本-无重大更新-informational)
 
