@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.3"
-__file_version_tuple__ = (1, 0, 3)
+__file_version__ = "1.0.4"
+__file_version_tuple__ = (1, 0, 4)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/20"
+__last_update_date__ = "2020/08/21"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -107,15 +107,34 @@ except Exception as e:
 class AutoLogin():
     def __init__(self, username: str, password: str, postTime: str = '09:00'):
         global userData, Crypt
-        self.s = Session()
-        self.s.headers['User-Agent'] = UA().random()
-        self.username = username
-        self.userData = copy.deepcopy(userData)
-        self.userData["username"] = username
-        self.userData["password"] = password
-        self.postTime = postTime.replace('，', ',').replace('：', ':').replace(' ', '')
-        self.crypt = Crypt
-    
+        try:
+            assert postTime, "Error! postTime is empty!"
+            assert username, "Error! username is empty!"
+            assert password, "Error! password is empty!"
+            self.s = Session()
+            self.username = username
+            self.userData = copy.deepcopy(userData)
+            self.userData["username"] = username
+            self.userData["password"] = password
+            self.postTime = postTime.replace('，', ',').replace('：', ':').replace(' ', '')
+            assert self.postTime, "Error! Invalid time!"
+            self.postTime = [self.postTime,] if ',' not in self.postTime else [i for i in self.postTime.split(',') if i]
+            self.postTime = list(set(self.postTime))
+            self.crypt = Crypt
+        except Exception as e:
+            error(repr(e))
+            print(repr(e))
+
+    def refreshSession(self) -> None:
+        try:
+            debug("Refresh the request session...")
+            self.s = Session()
+            self.s.headers['User-Agent'] = UA().random()
+            return None
+        except Exception as e:
+            error(repr(e))
+            return None
+
     def isNeedCaptcha(self) -> bool:
         try:
             urlFormat = "http://authserver.nuist.edu.cn/authserver/checkNeedCaptcha.htl?username={username}&_={timestamp}"
@@ -125,20 +144,21 @@ class AutoLogin():
         except Exception as e:
             warn(repr(e))
             return None
-    
+
     def run(self, retry: int = 3) -> bool:
         try:
+            self.refreshSession()
             debug("Try to get main page...")
             temp = self.s.get(indexUrl, timeout=15)
             tempBS = bs(temp)
-            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
-            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
-            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
-            self.userData['execution'] = execute
             if temp.status_code != 200:
                 error("Get index url failed! status code: {}".format(temp.status_code))
                 raise SelfAbort
             debug("Get main page success!")
+            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
+            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
+            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
+            self.userData['execution'] = execute
             debug("Try to know whether need captcha...")
             result = self.isNeedCaptcha()
             if result:
@@ -285,7 +305,7 @@ class AutoLogin():
             return self.run(retry - 1)
         except Exception as e:
             warn(repr(e))
-            if retry < 0:
+            if retry == 0:
                 error("Max Retried times!")
                 return False
             warn("Retry times: {}".format(3 - retry + 1))
