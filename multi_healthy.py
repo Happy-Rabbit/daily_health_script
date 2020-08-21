@@ -2,11 +2,11 @@
 
 import time, os, inspect, random, threading, sys, json, copy
 
-__file_version__ = "1.0.3"
-__file_version_tuple__ = (1, 0, 3)
+__file_version__ = "1.0.4"
+__file_version_tuple__ = (1, 0, 4)
 __license__ = "MIT"
 __author__ = "Happy-Rabbit"
-__last_update_date__ = "2020/08/20"
+__last_update_date__ = "2020/08/21"
 
 username    :str    =   ''
 password    :str    =   ''
@@ -109,7 +109,6 @@ class AutoLogin():
             assert username, "Error! username is empty!"
             assert password, "Error! password is empty!"
             self.s = Session()
-            self.s.headers['User-Agent'] = UA().random()
             self.username = username
             self.userData = copy.deepcopy(userData)
             self.userData["username"] = username
@@ -123,6 +122,16 @@ class AutoLogin():
             error(repr(e))
             print(repr(e))
 
+    def refreshSession(self) -> None:
+        try:
+            debug("Refresh the request session...")
+            self.s = Session()
+            self.s.headers['User-Agent'] = UA().random()
+            return None
+        except Exception as e:
+            error(repr(e))
+            return None
+
     def isNeedCaptcha(self) -> bool:
         try:
             urlFormat = "http://authserver.nuist.edu.cn/authserver/checkNeedCaptcha.htl?username={username}&_={timestamp}"
@@ -135,17 +144,18 @@ class AutoLogin():
 
     def run(self, retry: int = 3) -> bool:
         try:
+            self.refreshSession()
             debug("Try to get main page...")
             temp = self.s.get(indexUrl, timeout=15)
             tempBS = bs(temp)
-            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
-            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
-            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
-            self.userData['execution'] = execute
             if temp.status_code != 200:
                 error("Get index url failed! status code: {}".format(temp.status_code))
                 raise SelfAbort
             debug("Get main page success!")
+            pwdSalt = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'pwdEncryptSalt'][0]
+            execute = [i.get('value') for i in tempBS.findAll('input') if i.has_attr('id') and i.get('id') == 'execution'][0]
+            self.userData['password'] = self.crypt(self.userData['password'], pwdSalt)
+            self.userData['execution'] = execute
             debug("Try to know whether need captcha...")
             result = self.isNeedCaptcha()
             if result:
@@ -341,9 +351,9 @@ class UserClass():
                 return time.strftime("%Y-%m-%d ", time.localtime()) + i
         return time.strftime("%Y-%m-%d ", time.localtime(time.time() + 60 * 60 * 24)) + self.postTime[0]
     
-    def run(self) -> None:
+    def run(self) -> bool:
         if self.runLock:
-            return None
+            return False
         self.runLock = True
         debug(f"User({self.username}): Set run lock success.")
         start = time.time()
@@ -359,7 +369,7 @@ class UserClass():
         self.count += 1
         debug(f"User({self.username}): " + "Unset run lock success.")
         self.runLock = False
-        return None
+        return result
 
 def getTime(runTime: float = 0.0) -> str:
     realTime = int(time.time() - runTime)
@@ -483,7 +493,7 @@ def runAll(targetList: list) -> None:
     try:
         for i in targetList:
             result = i.run()
-            if not result:
+            if result != None and not result:
                 i.nextTime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() + 30 * 60))
                 retryList.append((time.strftime("%H:%M", time.localtime(time.time() + 30 * 60)), i))
                 continue

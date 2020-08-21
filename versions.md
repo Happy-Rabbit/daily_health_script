@@ -1,8 +1,33 @@
 ## 版本信息
 
-### 当前最新版本为 1.0.3
+### 当前最新版本为 1.0.4
 
 [![](https://img.shields.io/badge/-return%20to%20README.md-blueviolet)](README.md "返回README.md")
+
+### 1.0.4 更新内容
+
+项目 |内容
+:--: |:--:
+更新日期 | 2020年8月21日
+是否有重大更新 | ![是](https://img.shields.io/badge/-yes-important "是")
+版本状态 | ![最新](https://img.shields.io/badge/-newest-brightgreen "最新")
+
+**更新内容**:
+
+- 设置了请求`Session`自动刷新函数
+  - 大概可以避免`HTTP 401 Unauthorized`
+  - 此版本的log信息我会一直盯着, 希望不会再出现`401`请求
+
+**此版本的重要变量**: 
+
+> 和[1.0.1版本](#1-0-1)的[变量](#1-0-1-vars)一致
+
+**备注**:
+
+- 建议更新到此版本
+- 虽然老版本还能用, 但是这个更新**大概**可以避免旧版本一直报`401`错误的情况
+
+---
 
 ### 1.0.3 更新内容
 
@@ -10,7 +35,7 @@
 :--: |:--:
 更新日期 | 2020年8月20日
 是否有重大更新 | ![否](https://img.shields.io/badge/-no-informational "否")
-版本状态 | ![最新](https://img.shields.io/badge/-newest-brightgreen "最新")
+版本状态 | ![旧版](https://img.shields.io/badge/-old-informational "旧版")
 
 **更新内容**:
 
